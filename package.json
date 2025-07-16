@@ -2,10 +2,10 @@
   "name": "health-dns",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "ts-node-dev src/index.ts"
+    "dev": "ts-node-dev src/server.ts"
   },
   "keywords": [],
   "author": "",
@@ -14,8 +14,15 @@
   "dependencies": {
     "@types/express": "^5.0.3",
     "@types/node": "^24.0.13",
+    "dotenv": "^17.2.0",
     "express": "^5.1.0",
+    "pg": "^8.16.3",
+    "reflect-metadata": "^0.2.2",
     "ts-node-dev": "^2.0.0",
+    "typeorm": "^0.3.25",
     "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.4"
   }
 }
