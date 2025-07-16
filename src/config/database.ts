@@ -2,6 +2,7 @@ import { DataSource } from "typeorm";
 import { Domain } from "../entities/Domain";
 import { ExpectedDnsRecord } from "../entities/ExpectedDnsRecord";
 import { DnsCheckHistory } from "../entities/DnsCheckHistory";
+import { RetrievedDnsRecord } from "../entities/RetrievedDnsRecord";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -16,7 +17,7 @@ export const AppDataSource = new DataSource({
     ssl: {
         rejectUnauthorized: false
     },
-    entities: [Domain, ExpectedDnsRecord, DnsCheckHistory],
+    entities: [Domain, ExpectedDnsRecord, DnsCheckHistory, RetrievedDnsRecord],
     synchronize: false, // Set to false in production
     logging: true,
 });

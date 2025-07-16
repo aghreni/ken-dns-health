@@ -108,4 +108,22 @@ app.get("/dns-check-history", async (req, res) => {
     }
 });
 
+// Get retrieved DNS records for a specific check
+app.get("/retrieved-dns-records", async (req, res) => {
+    try {
+        const checkId = req.query.check_id ? parseInt(req.query.check_id as string) : undefined;
+
+        if (!checkId) {
+            return res.status(400).json({ error: "check_id parameter is required" });
+        }
+
+        const dnsValidationService = new DnsValidationService();
+        const records = await dnsValidationService.getRetrievedDnsRecords(checkId);
+        res.json({ records, count: records.length });
+    } catch (error) {
+        console.error("Error fetching retrieved DNS records:", error);
+        res.status(500).json({ error: "Failed to fetch retrieved DNS records" });
+    }
+});
+
 export default app;

@@ -10,8 +10,9 @@ The application now includes functionality to validate DNS records against expec
 
 1. **Get all domains** from the `domains` table
 2. **Perform DNS checks** for each domain using the DnsChecker service
-3. **Compare results** against expected records stored in `expected_dns_records` table
-4. **Update history** in `dns_check_history` table with validation results
+3. **Store retrieved DNS records** in `retrieved_dns_records` table
+4. **Compare results** against expected records stored in `expected_dns_records` table
+5. **Update history** in `dns_check_history` table with validation results
 
 ### Database Tables
 
@@ -30,6 +31,14 @@ The application now includes functionality to validate DNS records against expec
 - `checked_at` (Timestamp of when the check was performed)
 - `status` (Boolean: true if all expected records matched, false otherwise)
 - `details` (JSON text containing detailed validation results)
+
+#### retrieved_dns_records
+
+- `id` (Primary Key)
+- `check_id` (Foreign Key to dns_check_history table)
+- `domain_id` (Foreign Key to domains table)
+- `record_type` (VARCHAR: A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, PTR, SPF, DKIM, DMARC)
+- `record_value` (TEXT: Actual DNS record value retrieved)
 
 ### API Endpoints
 
@@ -84,6 +93,34 @@ Retrieves DNS check history. Optional `domain_id` parameter to filter by specifi
     }
   ],
   "count": 1
+}
+```
+
+#### GET `/retrieved-dns-records?check_id=123`
+
+Retrieves all DNS records that were retrieved during a specific validation check.
+
+**Response:**
+
+```json
+{
+  "records": [
+    {
+      "id": 1,
+      "check_id": 123,
+      "domain_id": 1,
+      "record_type": "A",
+      "record_value": "192.168.1.1"
+    },
+    {
+      "id": 2,
+      "check_id": 123,
+      "domain_id": 1,
+      "record_type": "MX",
+      "record_value": "10 mail.example.com"
+    }
+  ],
+  "count": 2
 }
 ```
 
