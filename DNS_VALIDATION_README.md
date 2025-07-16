@@ -124,6 +124,52 @@ Retrieves all DNS records that were retrieved during a specific validation check
 }
 ```
 
+#### PUT `/domain-with-expected-record`
+
+Adds a domain to the domains table and creates an expected DNS record for validation.
+
+**Request Body:**
+
+```json
+{
+  "domain": "example.com",
+  "record_type": "A",
+  "record_value": "192.168.1.1"
+}
+```
+
+**Response:**
+
+```json
+{
+  "message": "Domain and expected DNS record added successfully",
+  "domain": {
+    "id": 1,
+    "name": "example.com",
+    "created_at": "2025-07-16T10:30:00Z",
+    "updated_at": "2025-07-16T10:30:00Z"
+  },
+  "expected_record": {
+    "id": 1,
+    "domain_id": 1,
+    "record_type": "A",
+    "record_value": "192.168.1.1"
+  }
+}
+```
+
+**Validation:**
+
+- `domain`: Must be a valid domain name format
+- `record_type`: Must be one of: A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, PTR, SPF, DKIM, DMARC
+- `record_value`: Required field, accepts any text value
+
+**Behavior:**
+
+- If domain already exists, it will be reused
+- If the same expected record already exists, it will be returned without creating a duplicate
+- Record type is automatically converted to uppercase
+
 ### Setup
 
 1. **Run the migration:**
@@ -132,7 +178,38 @@ Retrieves all DNS records that were retrieved during a specific validation check
    -- Execute the SQL in migrations/create_dns_tables.sql
    ```
 
-2. **Add expected DNS records:**
+2. **Add expected DNS records using the API:**
+
+   ```bash
+   # Add a domain with A record expectation
+   curl -X PUT http://localhost:3000/domain-with-expected-record \
+     -H "Content-Type: application/json" \
+     -d '{
+       "domain": "example.com",
+       "record_type": "A",
+       "record_value": "192.168.1.1"
+     }'
+
+   # Add TXT record expectation for the same domain
+   curl -X PUT http://localhost:3000/domain-with-expected-record \
+     -H "Content-Type: application/json" \
+     -d '{
+       "domain": "example.com",
+       "record_type": "TXT",
+       "record_value": "v=spf1 include:_spf.example.com ~all"
+     }'
+
+   # Add MX record expectation
+   curl -X PUT http://localhost:3000/domain-with-expected-record \
+     -H "Content-Type: application/json" \
+     -d '{
+       "domain": "example.com",
+       "record_type": "MX",
+       "record_value": "mail.example.com"
+     }'
+   ```
+
+   **Or manually insert into database:**
 
    ```sql
    INSERT INTO expected_dns_records (domain_id, record_type, record_value) VALUES

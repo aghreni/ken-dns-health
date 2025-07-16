@@ -126,4 +126,56 @@ app.get("/retrieved-dns-records", async (req, res) => {
     }
 });
 
+// Add domain with expected DNS record
+app.put("/domain-with-expected-record", async (req, res) => {
+    try {
+        const { domain, record_type, record_value } = req.body;
+
+        // Validate required fields
+        if (!domain || !record_type || !record_value) {
+            return res.status(400).json({
+                error: "Missing required fields: domain, record_type, and record_value are required"
+            });
+        }
+
+        // Validate record_type (basic validation)
+        const validRecordTypes = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'SOA', 'SRV', 'PTR', 'SPF', 'DKIM', 'DMARC'];
+        if (!validRecordTypes.includes(record_type.toUpperCase())) {
+            return res.status(400).json({
+                error: `Invalid record_type. Must be one of: ${validRecordTypes.join(', ')}`
+            });
+        }
+
+        // Validate domain name format (basic validation)
+        const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+        if (!domainRegex.test(domain)) {
+            return res.status(400).json({
+                error: "Invalid domain name format"
+            });
+        }
+
+        const domainService = new DomainService();
+        const result = await domainService.addDomainWithExpectedRecord(domain, record_type, record_value);
+
+        res.json({
+            message: "Domain and expected DNS record added successfully",
+            domain: {
+                id: result.domain.id,
+                name: result.domain.name,
+                created_at: result.domain.created_at,
+                updated_at: result.domain.updated_at
+            },
+            expected_record: {
+                id: result.expectedRecord.id,
+                domain_id: result.expectedRecord.domain_id,
+                record_type: result.expectedRecord.record_type,
+                record_value: result.expectedRecord.record_value
+            }
+        });
+    } catch (error) {
+        console.error("Error adding domain with expected record:", error);
+        res.status(500).json({ error: "Failed to add domain with expected record" });
+    }
+});
+
 export default app;
