@@ -12,10 +12,12 @@ export class DomainService {
         this.expectedDnsRepository = AppDataSource.getRepository(ExpectedDnsRecord);
     }
 
-    async getAllDomains(): Promise<Domain[]> {
+    async getAllDomains(userId?: number): Promise<Domain[]> {
         try {
+            const whereClause = userId ? { user_id: userId } : {};
             return await this.domainRepository.find({
-                select: ['id', 'name'],
+                where: whereClause,
+                select: ['id', 'name', 'user_id', 'created_at', 'updated_at'],
                 order: { name: 'ASC' }
             });
         } catch (error) {
@@ -35,9 +37,11 @@ export class DomainService {
         }
     }
 
-    async getDomainNames(): Promise<string[]> {
+    async getDomainNames(userId?: number): Promise<string[]> {
         try {
+            const whereClause = userId ? { user_id: userId } : {};
             const domains = await this.domainRepository.find({
+                where: whereClause,
                 select: ['name']
             });
             return domains.map(domain => domain.name);
@@ -47,10 +51,12 @@ export class DomainService {
         }
     }
 
-    async createDomain(name: string): Promise<Domain> {
+    async createDomain(name: string, userId: number): Promise<Domain> {
         try {
-            // Check if domain already exists
-            const existingDomain = await this.getDomainByName(name);
+            // Check if domain already exists for this user
+            const existingDomain = await this.domainRepository.findOne({
+                where: { name, user_id: userId }
+            });
             if (existingDomain) {
                 return existingDomain;
             }
@@ -58,6 +64,7 @@ export class DomainService {
             // Create new domain
             const domain = new Domain();
             domain.name = name;
+            domain.user_id = userId;
             domain.created_at = new Date();
             domain.updated_at = new Date();
 
@@ -96,10 +103,10 @@ export class DomainService {
         }
     }
 
-    async addDomainWithExpectedRecord(domainName: string, recordType: string, recordValue: string): Promise<{ domain: Domain, expectedRecord: ExpectedDnsRecord }> {
+    async addDomainWithExpectedRecord(domainName: string, recordType: string, recordValue: string, userId: number): Promise<{ domain: Domain, expectedRecord: ExpectedDnsRecord }> {
         try {
             // Create or get domain
-            const domain = await this.createDomain(domainName);
+            const domain = await this.createDomain(domainName, userId);
 
             // Create expected DNS record
             const expectedRecord = await this.createExpectedDnsRecord(domain.id, recordType, recordValue);

@@ -38,7 +38,7 @@ app.get("/check-dns", authenticate, async (req: AuthenticatedRequest, res) => {
 app.get("/domains", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
         const domainService = new DomainService();
-        const domains = await domainService.getAllDomains();
+        const domains = await domainService.getAllDomains(req.user!.id);
         res.json({ domains, count: domains.length });
     } catch (error) {
         console.error("Error fetching domains:", error);
@@ -50,7 +50,7 @@ app.get("/domains", authenticate, async (req: AuthenticatedRequest, res) => {
 app.get("/domain-names", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
         const domainService = new DomainService();
-        const domainNames = await domainService.getDomainNames();
+        const domainNames = await domainService.getDomainNames(req.user!.id);
         res.json({ domainNames, count: domainNames.length });
     } catch (error) {
         console.error("Error fetching domain names:", error);
@@ -62,7 +62,7 @@ app.get("/domain-names", authenticate, async (req: AuthenticatedRequest, res) =>
 app.get("/check-all-dns", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
         const domainService = new DomainService();
-        const domainNames = await domainService.getDomainNames();
+        const domainNames = await domainService.getDomainNames(req.user!.id);
 
         const results = [];
         for (const domain of domainNames) {
@@ -157,7 +157,7 @@ app.post("/domain", authenticate, async (req: AuthenticatedRequest, res) => {
         }
 
         const domainService = new DomainService();
-        const result = await domainService.createDomain(domain);
+        const result = await domainService.createDomain(domain, req.user!.id);
 
         res.status(201).json({
             message: "Domain added successfully",
@@ -203,7 +203,7 @@ app.put("/domain-with-expected-record", authenticate, async (req: AuthenticatedR
         }
 
         const domainService = new DomainService();
-        const result = await domainService.addDomainWithExpectedRecord(domain, record_type, record_value);
+        const result = await domainService.addDomainWithExpectedRecord(domain, record_type, record_value, req.user!.id);
 
         res.json({
             message: "Domain and expected DNS record added successfully",
