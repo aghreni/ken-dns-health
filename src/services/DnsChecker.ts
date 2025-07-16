@@ -60,7 +60,11 @@ export class DnsChecker {
     }
 
     async getSRV() {
-        return dns.resolveSrv(`_sip._tcp.${this.domain}`).catch(() => []);
+        try {
+            return await dns.resolveSrv(`_sip._tcp.${this.domain}`);
+        } catch {
+            return [];
+        }
     }
 
     async getPTR() {

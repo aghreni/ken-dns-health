@@ -5,7 +5,7 @@ import { ExpectedDnsRecord } from '../../src/entities/ExpectedDnsRecord';
 import { AppDataSource } from '../../src/config/database';
 
 // Mock the database connection
-jest.mock('../src/config/database');
+jest.mock('../../src/config/database');
 
 const mockAppDataSource = AppDataSource as jest.Mocked<typeof AppDataSource>;
 

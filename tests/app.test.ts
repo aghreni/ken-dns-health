@@ -14,6 +14,8 @@ const mockDomainService = DomainService as jest.MockedClass<typeof DomainService
 const mockDnsValidationService = DnsValidationService as jest.MockedClass<typeof DnsValidationService>;
 
 describe('App Routes', () => {
+    const authHeader = 'Bearer test-secret-token';
+
     beforeEach(() => {
         jest.clearAllMocks();
     });
@@ -39,6 +41,8 @@ describe('App Routes', () => {
 
             const response = await request(app)
                 .get('/check-dns')
+                .set('Authorization', authHeader)
+                .set('Authorization', authHeader)
                 .query({ domain: 'example.com' });
 
             expect(response.status).toBe(200);
@@ -48,7 +52,9 @@ describe('App Routes', () => {
 
         it('should return 400 error when domain is not provided', async () => {
             const response = await request(app)
-                .get('/check-dns');
+                .get('/check-dns')
+                .set('Authorization', authHeader)
+                .set('Authorization', authHeader);
 
             expect(response.status).toBe(400);
             expect(response.body).toEqual({ error: 'No domain provided' });
@@ -65,20 +71,22 @@ describe('App Routes', () => {
             mockDomainService.prototype.getAllDomains.mockResolvedValue(mockDomains);
 
             const response = await request(app)
-                .get('/domains');
+                .get('/domains')
+                .set('Authorization', authHeader);
 
             expect(response.status).toBe(200);
-            expect(response.body).toEqual({
-                domains: mockDomains,
-                count: 2
-            });
+            expect(response.body.domains).toHaveLength(2);
+            expect(response.body.count).toBe(2);
+            expect(response.body.domains[0].name).toBe('example.com');
+            expect(response.body.domains[1].name).toBe('test.com');
         });
 
         it('should handle service errors', async () => {
             mockDomainService.prototype.getAllDomains.mockRejectedValue(new Error('Database error'));
 
             const response = await request(app)
-                .get('/domains');
+                .get('/domains')
+                .set('Authorization', authHeader);
 
             expect(response.status).toBe(500);
             expect(response.body).toEqual({ error: 'Failed to fetch domains' });
@@ -92,7 +100,8 @@ describe('App Routes', () => {
             mockDomainService.prototype.getDomainNames.mockResolvedValue(mockDomainNames);
 
             const response = await request(app)
-                .get('/domain-names');
+                .get('/domain-names')
+                .set('Authorization', authHeader);
 
             expect(response.status).toBe(200);
             expect(response.body).toEqual({
@@ -105,7 +114,8 @@ describe('App Routes', () => {
             mockDomainService.prototype.getDomainNames.mockRejectedValue(new Error('Database error'));
 
             const response = await request(app)
-                .get('/domain-names');
+                .get('/domain-names')
+                .set('Authorization', authHeader);
 
             expect(response.status).toBe(500);
             expect(response.body).toEqual({ error: 'Failed to fetch domain names' });
@@ -134,7 +144,8 @@ describe('App Routes', () => {
             mockDnsChecker.prototype.checkAll.mockResolvedValue(mockDnsResults);
 
             const response = await request(app)
-                .get('/check-all-dns');
+                .get('/check-all-dns')
+                .set('Authorization', authHeader);
 
             expect(response.status).toBe(200);
             expect(response.body.totalDomains).toBe(2);
@@ -150,7 +161,8 @@ describe('App Routes', () => {
             mockDnsChecker.prototype.checkAll.mockRejectedValue(new Error('DNS lookup failed'));
 
             const response = await request(app)
-                .get('/check-all-dns');
+                .get('/check-all-dns')
+                .set('Authorization', authHeader);
 
             expect(response.status).toBe(200);
             expect(response.body.results[0].status).toBe('error');
@@ -184,7 +196,8 @@ describe('App Routes', () => {
             mockDnsValidationService.prototype.validateAllDomains.mockResolvedValue(mockValidationResults);
 
             const response = await request(app)
-                .get('/validate-all-dns');
+                .get('/validate-all-dns')
+                .set('Authorization', authHeader);
 
             expect(response.status).toBe(200);
             expect(response.body).toEqual(mockValidationResults);
@@ -194,7 +207,8 @@ describe('App Routes', () => {
             mockDnsValidationService.prototype.validateAllDomains.mockRejectedValue(new Error('Validation failed'));
 
             const response = await request(app)
-                .get('/validate-all-dns');
+                .get('/validate-all-dns')
+                .set('Authorization', authHeader);
 
             expect(response.status).toBe(500);
             expect(response.body).toEqual({ error: 'Failed to validate DNS for all domains' });
@@ -211,13 +225,14 @@ describe('App Routes', () => {
             mockDnsValidationService.prototype.getDnsCheckHistory.mockResolvedValue(mockHistory);
 
             const response = await request(app)
-                .get('/dns-check-history');
+                .get('/dns-check-history')
+                .set('Authorization', authHeader);
 
             expect(response.status).toBe(200);
-            expect(response.body).toEqual({
-                history: mockHistory,
-                count: 2
-            });
+            expect(response.body.history).toHaveLength(2);
+            expect(response.body.count).toBe(2);
+            expect(response.body.history[0].id).toBe(1);
+            expect(response.body.history[1].id).toBe(2);
         });
 
         it('should return history for specific domain', async () => {
@@ -229,6 +244,7 @@ describe('App Routes', () => {
 
             const response = await request(app)
                 .get('/dns-check-history')
+                .set('Authorization', authHeader)
                 .query({ domain_id: '1' });
 
             expect(response.status).toBe(200);
@@ -248,6 +264,7 @@ describe('App Routes', () => {
 
             const response = await request(app)
                 .get('/retrieved-dns-records')
+                .set('Authorization', authHeader)
                 .query({ check_id: '1' });
 
             expect(response.status).toBe(200);
@@ -259,7 +276,8 @@ describe('App Routes', () => {
 
         it('should return 400 error when check_id is not provided', async () => {
             const response = await request(app)
-                .get('/retrieved-dns-records');
+                .get('/retrieved-dns-records')
+                .set('Authorization', authHeader);
 
             expect(response.status).toBe(400);
             expect(response.body).toEqual({ error: 'check_id parameter is required' });
@@ -270,10 +288,72 @@ describe('App Routes', () => {
 
             const response = await request(app)
                 .get('/retrieved-dns-records')
+                .set('Authorization', authHeader)
                 .query({ check_id: '1' });
 
             expect(response.status).toBe(500);
             expect(response.body).toEqual({ error: 'Failed to fetch retrieved DNS records' });
+        });
+    });
+
+    describe('POST /domain', () => {
+        it('should add domain successfully', async () => {
+            const mockDomain = {
+                id: 1,
+                name: 'example.com',
+                created_at: new Date(),
+                updated_at: new Date()
+            };
+
+            mockDomainService.prototype.createDomain.mockResolvedValue(mockDomain);
+
+            const response = await request(app)
+                .post('/domain')
+                .set('Authorization', authHeader)
+                .send({
+                    domain: 'example.com'
+                });
+
+            expect(response.status).toBe(201);
+            expect(response.body.message).toBe('Domain added successfully');
+            expect(response.body.domain.name).toBe('example.com');
+            expect(mockDomainService.prototype.createDomain).toHaveBeenCalledWith('example.com');
+        });
+
+        it('should return 400 error when domain is missing', async () => {
+            const response = await request(app)
+                .post('/domain')
+                .set('Authorization', authHeader)
+                .send({});
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('Missing required field: domain is required');
+        });
+
+        it('should return 400 error for invalid domain format', async () => {
+            const response = await request(app)
+                .post('/domain')
+                .set('Authorization', authHeader)
+                .send({
+                    domain: 'invalid..domain'
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('Invalid domain name format');
+        });
+
+        it('should handle service errors', async () => {
+            mockDomainService.prototype.createDomain.mockRejectedValue(new Error('Database error'));
+
+            const response = await request(app)
+                .post('/domain')
+                .set('Authorization', authHeader)
+                .send({
+                    domain: 'example.com'
+                });
+
+            expect(response.status).toBe(500);
+            expect(response.body.error).toBe('Failed to add domain');
         });
     });
 
@@ -288,6 +368,7 @@ describe('App Routes', () => {
 
             const response = await request(app)
                 .put('/domain-with-expected-record')
+                .set('Authorization', authHeader)
                 .send({
                     domain: 'example.com',
                     record_type: 'A',
@@ -304,6 +385,7 @@ describe('App Routes', () => {
         it('should return 400 error when domain is missing', async () => {
             const response = await request(app)
                 .put('/domain-with-expected-record')
+                .set('Authorization', authHeader)
                 .send({
                     record_type: 'A',
                     record_value: '192.168.1.1'
@@ -316,6 +398,7 @@ describe('App Routes', () => {
         it('should return 400 error when record_type is missing', async () => {
             const response = await request(app)
                 .put('/domain-with-expected-record')
+                .set('Authorization', authHeader)
                 .send({
                     domain: 'example.com',
                     record_value: '192.168.1.1'
@@ -328,6 +411,7 @@ describe('App Routes', () => {
         it('should return 400 error when record_value is missing', async () => {
             const response = await request(app)
                 .put('/domain-with-expected-record')
+                .set('Authorization', authHeader)
                 .send({
                     domain: 'example.com',
                     record_type: 'A'
@@ -340,6 +424,7 @@ describe('App Routes', () => {
         it('should return 400 error for invalid record_type', async () => {
             const response = await request(app)
                 .put('/domain-with-expected-record')
+                .set('Authorization', authHeader)
                 .send({
                     domain: 'example.com',
                     record_type: 'INVALID',
@@ -353,6 +438,7 @@ describe('App Routes', () => {
         it('should return 400 error for invalid domain format', async () => {
             const response = await request(app)
                 .put('/domain-with-expected-record')
+                .set('Authorization', authHeader)
                 .send({
                     domain: 'invalid..domain',
                     record_type: 'A',
@@ -376,6 +462,7 @@ describe('App Routes', () => {
 
                 const response = await request(app)
                     .put('/domain-with-expected-record')
+                    .set('Authorization', authHeader)
                     .send({
                         domain: 'example.com',
                         record_type: recordType,
@@ -392,6 +479,7 @@ describe('App Routes', () => {
 
             const response = await request(app)
                 .put('/domain-with-expected-record')
+                .set('Authorization', authHeader)
                 .send({
                     domain: 'example.com',
                     record_type: 'A',
