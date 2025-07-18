@@ -1,5 +1,10 @@
 import { authenticate, basicAuth, rateLimit } from '../../src/middleware/auth';
 import { Request, Response, NextFunction } from 'express';
+import { UserService } from '../../src/services/UserService';
+
+// Mock the UserService
+jest.mock('../../src/services/UserService');
+const mockUserService = UserService as jest.MockedClass<typeof UserService>;
 
 describe('Authentication Middleware', () => {
     let mockRequest: Partial<Request>;
@@ -21,6 +26,9 @@ describe('Authentication Middleware', () => {
         process.env.API_KEY = 'test-api-key';
         process.env.BASIC_AUTH_USERNAME = 'admin';
         process.env.BASIC_AUTH_PASSWORD = 'password123';
+
+        // Clear all mocks
+        jest.clearAllMocks();
     });
 
     afterEach(() => {
@@ -28,34 +36,52 @@ describe('Authentication Middleware', () => {
     });
 
     describe('authenticate middleware', () => {
-        it('should allow request with valid Bearer token', () => {
+        it('should allow request with valid Bearer token', async () => {
+            const mockUser = {
+                id: 1,
+                username: 'testuser',
+                role: 'user',
+                password_hash: 'hash',
+                created_at: new Date(),
+                updated_at: new Date()
+            };
+            mockUserService.prototype.getUserFromToken.mockResolvedValue(mockUser);
+
             mockRequest.headers = {
                 authorization: 'Bearer test-secret-token'
             };
 
-            authenticate(mockRequest as Request, mockResponse as Response, mockNext);
+            await authenticate(mockRequest as any, mockResponse as Response, mockNext);
 
             expect(mockNext).toHaveBeenCalled();
             expect(mockResponse.status).not.toHaveBeenCalled();
+            expect((mockRequest as any).user).toEqual({
+                id: mockUser.id,
+                username: mockUser.username,
+                role: mockUser.role
+            });
         });
 
-        it('should allow request with valid API key', () => {
+        it('should allow request with valid API key', async () => {
             mockRequest.headers = {
                 'x-api-key': 'test-api-key'
             };
 
-            authenticate(mockRequest as Request, mockResponse as Response, mockNext);
+            await authenticate(mockRequest as any, mockResponse as Response, mockNext);
 
             expect(mockNext).toHaveBeenCalled();
             expect(mockResponse.status).not.toHaveBeenCalled();
+            expect((mockRequest as any).user).toEqual({ id: 0, username: 'API User', role: 'admin' });
         });
 
-        it('should reject request with invalid Bearer token', () => {
+        it('should reject request with invalid Bearer token', async () => {
+            mockUserService.prototype.getUserFromToken.mockResolvedValue(null);
+
             mockRequest.headers = {
                 authorization: 'Bearer invalid-token'
             };
 
-            authenticate(mockRequest as Request, mockResponse as Response, mockNext);
+            await authenticate(mockRequest as any, mockResponse as Response, mockNext);
 
             expect(mockNext).not.toHaveBeenCalled();
             expect(mockResponse.status).toHaveBeenCalledWith(401);

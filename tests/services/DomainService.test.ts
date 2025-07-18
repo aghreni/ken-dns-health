@@ -44,17 +44,18 @@ describe('DomainService', () => {
     describe('getAllDomains', () => {
         it('should return all domains successfully', async () => {
             const mockDomains = [
-                { id: 1, name: 'example.com', created_at: new Date(), updated_at: new Date() },
-                { id: 2, name: 'test.com', created_at: new Date(), updated_at: new Date() }
+                { id: 1, name: 'example.com', user_id: 1, user: {} as any, created_at: new Date(), updated_at: new Date() },
+                { id: 2, name: 'test.com', user_id: 1, user: {} as any, created_at: new Date(), updated_at: new Date() }
             ];
 
             mockDomainRepository.find.mockResolvedValue(mockDomains);
 
-            const result = await domainService.getAllDomains();
+            const result = await domainService.getAllDomains(1);
 
             expect(result).toEqual(mockDomains);
             expect(mockDomainRepository.find).toHaveBeenCalledWith({
-                select: ['id', 'name'],
+                where: { user_id: 1 },
+                select: ['id', 'name', 'user_id', 'created_at', 'updated_at'],
                 order: { name: 'ASC' }
             });
         });
@@ -62,13 +63,13 @@ describe('DomainService', () => {
         it('should handle database errors', async () => {
             mockDomainRepository.find.mockRejectedValue(new Error('Database connection failed'));
 
-            await expect(domainService.getAllDomains()).rejects.toThrow('Failed to fetch domains from database');
+            await expect(domainService.getAllDomains(1)).rejects.toThrow('Failed to fetch domains from database');
         });
     });
 
     describe('getDomainByName', () => {
         it('should return domain by name successfully', async () => {
-            const mockDomain = { id: 1, name: 'example.com', created_at: new Date(), updated_at: new Date() };
+            const mockDomain = { id: 1, name: 'example.com', user_id: 1, user: {} as any, created_at: new Date(), updated_at: new Date() };
 
             mockDomainRepository.findOne.mockResolvedValue(mockDomain);
 
@@ -98,16 +99,17 @@ describe('DomainService', () => {
     describe('getDomainNames', () => {
         it('should return domain names successfully', async () => {
             const mockDomains = [
-                { id: 1, name: 'example.com', created_at: new Date(), updated_at: new Date() },
-                { id: 2, name: 'test.com', created_at: new Date(), updated_at: new Date() }
+                { id: 1, name: 'example.com', user_id: 1, user: {} as any, created_at: new Date(), updated_at: new Date() },
+                { id: 2, name: 'test.com', user_id: 1, user: {} as any, created_at: new Date(), updated_at: new Date() }
             ];
 
             mockDomainRepository.find.mockResolvedValue(mockDomains);
 
-            const result = await domainService.getDomainNames();
+            const result = await domainService.getDomainNames(1);
 
             expect(result).toEqual(['example.com', 'test.com']);
             expect(mockDomainRepository.find).toHaveBeenCalledWith({
+                where: { user_id: 1 },
                 select: ['name']
             });
         });
@@ -115,32 +117,32 @@ describe('DomainService', () => {
         it('should handle database errors', async () => {
             mockDomainRepository.find.mockRejectedValue(new Error('Database connection failed'));
 
-            await expect(domainService.getDomainNames()).rejects.toThrow('Failed to fetch domain names from database');
+            await expect(domainService.getDomainNames(1)).rejects.toThrow('Failed to fetch domain names from database');
         });
     });
 
     describe('createDomain', () => {
         it('should create a new domain successfully', async () => {
-            const mockDomain = { id: 1, name: 'example.com', created_at: new Date(), updated_at: new Date() };
+            const mockDomain = { id: 1, name: 'example.com', user_id: 1, user: {} as any, created_at: new Date(), updated_at: new Date() };
 
             mockDomainRepository.findOne.mockResolvedValue(null); // Domain doesn't exist
             mockDomainRepository.save.mockResolvedValue(mockDomain);
 
-            const result = await domainService.createDomain('example.com');
+            const result = await domainService.createDomain('example.com', 1);
 
             expect(result).toEqual(mockDomain);
             expect(mockDomainRepository.findOne).toHaveBeenCalledWith({
-                where: { name: 'example.com' }
+                where: { name: 'example.com', user_id: 1 }
             });
             expect(mockDomainRepository.save).toHaveBeenCalled();
         });
 
         it('should return existing domain if already exists', async () => {
-            const mockExistingDomain = { id: 1, name: 'example.com', created_at: new Date(), updated_at: new Date() };
+            const mockExistingDomain = { id: 1, name: 'example.com', user_id: 1, user: {} as any, created_at: new Date(), updated_at: new Date() };
 
             mockDomainRepository.findOne.mockResolvedValue(mockExistingDomain);
 
-            const result = await domainService.createDomain('example.com');
+            const result = await domainService.createDomain('example.com', 1);
 
             expect(result).toEqual(mockExistingDomain);
             expect(mockDomainRepository.save).not.toHaveBeenCalled();
@@ -149,7 +151,7 @@ describe('DomainService', () => {
         it('should handle database errors', async () => {
             mockDomainRepository.findOne.mockRejectedValue(new Error('Database connection failed'));
 
-            await expect(domainService.createDomain('example.com')).rejects.toThrow('Failed to create domain in database');
+            await expect(domainService.createDomain('example.com', 1)).rejects.toThrow('Failed to create domain in database');
         });
     });
 
@@ -210,7 +212,7 @@ describe('DomainService', () => {
 
     describe('addDomainWithExpectedRecord', () => {
         it('should add domain with expected record successfully', async () => {
-            const mockDomain = { id: 1, name: 'example.com', created_at: new Date(), updated_at: new Date() };
+            const mockDomain = { id: 1, name: 'example.com', user_id: 1, user: {} as any, created_at: new Date(), updated_at: new Date() };
             const mockExpectedRecord = { id: 1, domain_id: 1, record_type: 'A', record_value: '192.168.1.1' };
 
             // Mock domain creation
@@ -221,14 +223,14 @@ describe('DomainService', () => {
             mockExpectedDnsRepository.findOne.mockResolvedValue(null);
             mockExpectedDnsRepository.save.mockResolvedValue(mockExpectedRecord);
 
-            const result = await domainService.addDomainWithExpectedRecord('example.com', 'A', '192.168.1.1');
+            const result = await domainService.addDomainWithExpectedRecord('example.com', 'A', '192.168.1.1', 1);
 
             expect(result.domain).toEqual(mockDomain);
             expect(result.expectedRecord).toEqual(mockExpectedRecord);
         });
 
         it('should use existing domain if it already exists', async () => {
-            const mockExistingDomain = { id: 1, name: 'example.com', created_at: new Date(), updated_at: new Date() };
+            const mockExistingDomain = { id: 1, name: 'example.com', user_id: 1, user: {} as any, created_at: new Date(), updated_at: new Date() };
             const mockExpectedRecord = { id: 1, domain_id: 1, record_type: 'A', record_value: '192.168.1.1' };
 
             // Mock existing domain
@@ -238,7 +240,7 @@ describe('DomainService', () => {
             mockExpectedDnsRepository.findOne.mockResolvedValue(null);
             mockExpectedDnsRepository.save.mockResolvedValue(mockExpectedRecord);
 
-            const result = await domainService.addDomainWithExpectedRecord('example.com', 'A', '192.168.1.1');
+            const result = await domainService.addDomainWithExpectedRecord('example.com', 'A', '192.168.1.1', 1);
 
             expect(result.domain).toEqual(mockExistingDomain);
             expect(result.expectedRecord).toEqual(mockExpectedRecord);
@@ -248,7 +250,7 @@ describe('DomainService', () => {
         it('should handle errors gracefully', async () => {
             mockDomainRepository.findOne.mockRejectedValue(new Error('Database connection failed'));
 
-            await expect(domainService.addDomainWithExpectedRecord('example.com', 'A', '192.168.1.1')).rejects.toThrow('Failed to add domain with expected record');
+            await expect(domainService.addDomainWithExpectedRecord('example.com', 'A', '192.168.1.1', 1)).rejects.toThrow('Failed to add domain with expected record');
         });
     });
 });

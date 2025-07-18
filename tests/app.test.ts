@@ -9,6 +9,15 @@ jest.mock('../src/services/DnsChecker');
 jest.mock('../src/services/DomainService');
 jest.mock('../src/services/DnsValidationService');
 
+// Mock the authentication middleware
+jest.mock('../src/middleware/auth', () => ({
+    authenticate: (req: any, res: any, next: any) => {
+        req.user = { id: 1, username: 'testuser', role: 'user' };
+        next();
+    },
+    rateLimit: () => (req: any, res: any, next: any) => next()
+}));
+
 const mockDnsChecker = DnsChecker as jest.MockedClass<typeof DnsChecker>;
 const mockDomainService = DomainService as jest.MockedClass<typeof DomainService>;
 const mockDnsValidationService = DnsValidationService as jest.MockedClass<typeof DnsValidationService>;
@@ -64,8 +73,8 @@ describe('App Routes', () => {
     describe('GET /domains', () => {
         it('should return all domains successfully', async () => {
             const mockDomains = [
-                { id: 1, name: 'example.com', created_at: new Date(), updated_at: new Date() },
-                { id: 2, name: 'test.com', created_at: new Date(), updated_at: new Date() }
+                { id: 1, name: 'example.com', user_id: 1, user: {} as any, created_at: new Date(), updated_at: new Date() },
+                { id: 2, name: 'test.com', user_id: 1, user: {} as any, created_at: new Date(), updated_at: new Date() }
             ];
 
             mockDomainService.prototype.getAllDomains.mockResolvedValue(mockDomains);
@@ -301,6 +310,8 @@ describe('App Routes', () => {
             const mockDomain = {
                 id: 1,
                 name: 'example.com',
+                user_id: 1,
+                user: {} as any,
                 created_at: new Date(),
                 updated_at: new Date()
             };
@@ -317,7 +328,7 @@ describe('App Routes', () => {
             expect(response.status).toBe(201);
             expect(response.body.message).toBe('Domain added successfully');
             expect(response.body.domain.name).toBe('example.com');
-            expect(mockDomainService.prototype.createDomain).toHaveBeenCalledWith('example.com');
+            expect(mockDomainService.prototype.createDomain).toHaveBeenCalledWith('example.com', 1);
         });
 
         it('should return 400 error when domain is missing', async () => {
@@ -360,7 +371,7 @@ describe('App Routes', () => {
     describe('PUT /domain-with-expected-record', () => {
         it('should add domain with expected record successfully', async () => {
             const mockResult = {
-                domain: { id: 1, name: 'example.com', created_at: new Date(), updated_at: new Date() },
+                domain: { id: 1, name: 'example.com', user_id: 1, user: {} as any, created_at: new Date(), updated_at: new Date() },
                 expectedRecord: { id: 1, domain_id: 1, record_type: 'A', record_value: '192.168.1.1' }
             };
 
@@ -454,7 +465,7 @@ describe('App Routes', () => {
 
             for (const recordType of validRecordTypes) {
                 const mockResult = {
-                    domain: { id: 1, name: 'example.com', created_at: new Date(), updated_at: new Date() },
+                    domain: { id: 1, name: 'example.com', user_id: 1, user: {} as any, created_at: new Date(), updated_at: new Date() },
                     expectedRecord: { id: 1, domain_id: 1, record_type: recordType, record_value: 'test-value' }
                 };
 
