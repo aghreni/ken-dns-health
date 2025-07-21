@@ -239,10 +239,10 @@ app.post("/auth/register", async (req: AuthenticatedRequest, res) => {
         }
 
         // Validate username format
-        const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+        const usernameRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!usernameRegex.test(username)) {
             return res.status(400).json({
-                error: "Invalid username format. Username must be 3-20 characters long and contain only letters, numbers, and underscores."
+                error: "Invalid email format. Please enter a valid email address."
             });
         }
 
