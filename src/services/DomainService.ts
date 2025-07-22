@@ -53,11 +53,16 @@ export class DomainService {
 
     async createDomain(name: string, userId: number): Promise<Domain> {
         try {
-            // Check if domain already exists for this user
+            // Check if domain already exists globally (due to unique constraint)
             const existingDomain = await this.domainRepository.findOne({
-                where: { name, user_id: userId }
+                where: { name }
             });
             if (existingDomain) {
+                // If domain exists but belongs to another user, throw specific error
+                if (existingDomain.user_id !== userId) {
+                    throw new Error('Domain already exists');
+                }
+                // If domain belongs to the same user, return it
                 return existingDomain;
             }
 
@@ -71,6 +76,13 @@ export class DomainService {
             return await this.domainRepository.save(domain);
         } catch (error) {
             console.error('Error creating domain:', error);
+            if (error instanceof Error && error.message === 'Domain already exists') {
+                throw error;
+            }
+            // Handle database constraint violation
+            if (error instanceof Error && error.message.includes('duplicate key value violates unique constraint')) {
+                throw new Error('Domain already exists');
+            }
             throw new Error('Failed to create domain in database');
         }
     }
@@ -114,6 +126,9 @@ export class DomainService {
             return { domain, expectedRecord };
         } catch (error) {
             console.error('Error adding domain with expected record:', error);
+            if (error instanceof Error && error.message === 'Domain already exists') {
+                throw error; // Propagate the specific error
+            }
             throw new Error('Failed to add domain with expected record');
         }
     }

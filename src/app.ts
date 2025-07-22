@@ -148,14 +148,6 @@ app.post("/domain", authenticate, async (req: AuthenticatedRequest, res) => {
             });
         }
 
-        // Validate domain name format (basic validation)
-        const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-        if (!domainRegex.test(domain)) {
-            return res.status(400).json({
-                error: "Invalid domain name format"
-            });
-        }
-
         const domainService = new DomainService();
         const result = await domainService.createDomain(domain, req.user!.id);
 
@@ -170,6 +162,9 @@ app.post("/domain", authenticate, async (req: AuthenticatedRequest, res) => {
         });
     } catch (error) {
         console.error("Error adding domain:", error);
+        if (error instanceof Error && error.message === 'Domain already exists') {
+            return res.status(409).json({ error: "Domain already exists" });
+        }
         res.status(500).json({ error: "Failed to add domain" });
     }
 });
@@ -194,13 +189,6 @@ app.put("/domain-with-expected-record", authenticate, async (req: AuthenticatedR
             });
         }
 
-        // Validate domain name format (basic validation)
-        const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-        if (!domainRegex.test(domain)) {
-            return res.status(400).json({
-                error: "Invalid domain name format"
-            });
-        }
 
         const domainService = new DomainService();
         const result = await domainService.addDomainWithExpectedRecord(domain, record_type, record_value, req.user!.id);
@@ -222,6 +210,9 @@ app.put("/domain-with-expected-record", authenticate, async (req: AuthenticatedR
         });
     } catch (error) {
         console.error("Error adding domain with expected record:", error);
+        if (error instanceof Error && error.message === 'Domain already exists') {
+            return res.status(409).json({ error: "Domain already exists" });
+        }
         res.status(500).json({ error: "Failed to add domain with expected record" });
     }
 });
