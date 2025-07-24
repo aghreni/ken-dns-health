@@ -5,18 +5,21 @@ import { ExpectedDnsRecord } from "../entities/ExpectedDnsRecord";
 import { DnsCheckHistory } from "../entities/DnsCheckHistory";
 import { RetrievedDnsRecord } from "../entities/RetrievedDnsRecord";
 import { DnsChecker } from "./DnsChecker";
+import { EmailService, ValidationFailure } from "./EmailService";
 
 export class DnsValidationService {
     private domainRepository: Repository<Domain>;
     private expectedDnsRepository: Repository<ExpectedDnsRecord>;
     private dnsCheckHistoryRepository: Repository<DnsCheckHistory>;
     private retrievedDnsRepository: Repository<RetrievedDnsRecord>;
+    private emailService: EmailService;
 
     constructor() {
         this.domainRepository = AppDataSource.getRepository(Domain);
         this.expectedDnsRepository = AppDataSource.getRepository(ExpectedDnsRecord);
         this.dnsCheckHistoryRepository = AppDataSource.getRepository(DnsCheckHistory);
         this.retrievedDnsRepository = AppDataSource.getRepository(RetrievedDnsRecord);
+        this.emailService = new EmailService();
     }
 
     async validateAllDomains() {
@@ -24,11 +27,26 @@ export class DnsValidationService {
             // Get all domains from database
             const domains = await this.domainRepository.find();
             const results = [];
+            const validationFailures: ValidationFailure[] = [];
 
             for (const domain of domains) {
                 try {
                     const result = await this.validateDomain(domain);
                     results.push(result);
+
+                    // Collect validation failures for email alerts
+                    if (result.status === 'failed' && result.validation_details) {
+                        for (const detail of result.validation_details) {
+                            if (!detail.matched) {
+                                validationFailures.push({
+                                    domain: result.domain,
+                                    record_type: detail.record_type,
+                                    expected_value: detail.expected_value,
+                                    actual_values: detail.actual_values
+                                });
+                            }
+                        }
+                    }
                 } catch (error) {
                     console.error(`Error validating domain ${domain.name}:`, error);
                     results.push({
@@ -37,6 +55,17 @@ export class DnsValidationService {
                         status: 'error',
                         error: error instanceof Error ? error.message : 'Unknown error'
                     });
+                }
+            }
+
+            // Send email alert if there are validation failures
+            if (validationFailures.length > 0) {
+                try {
+                    console.log(`Sending email alert for ${validationFailures.length} DNS validation failures`);
+                    await this.emailService.sendValidationFailureAlert(validationFailures);
+                } catch (emailError) {
+                    console.error('Failed to send email alert:', emailError);
+                    // Don't throw - email failure shouldn't break the main validation process
                 }
             }
 
@@ -108,14 +137,47 @@ export class DnsValidationService {
                     break;
                 case 'MX':
                     actualValues = actualDnsResults.MX || [];
-                    // For MX records, check if exchange matches
-                    matched = actualValues.some(mx => mx.exchange === expectedValue);
+                    // For MX records, check both exchange-only and full format matches
+                    matched = actualValues.some(mx => {
+                        // Check if expected value is just the exchange name
+                        if (mx.exchange === expectedValue) {
+                            return true;
+                        }
+                        // Check if expected value is in full format "exchange (Priority: priority)"
+                        const fullFormat = `${mx.exchange} (Priority: ${mx.priority})`;
+                        return fullFormat === expectedValue;
+                    });
                     break;
                 case 'TXT':
                     actualValues = actualDnsResults.TXT || [];
-                    // TXT records come as arrays, so flatten and check
-                    const flatTxtRecords = actualValues.flat();
-                    matched = flatTxtRecords.includes(expectedValue);
+                    // TXT records come as nested arrays, flatten and check each level
+                    let txtMatched = false;
+
+                    // First try direct comparison if it's already a flat array
+                    if (actualValues.includes(expectedValue)) {
+                        txtMatched = true;
+                    } else {
+                        // Flatten completely and check
+                        const flatTxtRecords = actualValues.flat(Infinity);
+                        txtMatched = flatTxtRecords.includes(expectedValue);
+
+                        // If still no match, try joining array elements (in case it's split)
+                        if (!txtMatched) {
+                            for (const record of actualValues) {
+                                if (Array.isArray(record)) {
+                                    const joinedRecord = record.join(' ');
+                                    if (joinedRecord === expectedValue) {
+                                        txtMatched = true;
+                                        break;
+                                    }
+                                } else if (record === expectedValue) {
+                                    txtMatched = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    matched = txtMatched;
                     break;
                 case 'NS':
                     actualValues = actualDnsResults.NS || [];
