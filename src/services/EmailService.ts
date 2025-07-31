@@ -9,12 +9,22 @@ export interface ValidationFailure {
 
 export class EmailService {
     private transporter: nodemailer.Transporter;
-    private recipients: string[] = [
-        'hardik.vyas@kenscio.com',
-        'harsha.hs@kenscio.com',
-    ];
+    private recipients: string[];
 
     constructor() {
+        // Get recipients from environment variable or use defaults
+        const envRecipients = process.env.EMAIL_RECIPIENTS;
+        if (envRecipients) {
+            this.recipients = envRecipients.split(',').map(email => email.trim());
+        } else {
+            // Fallback to default recipients
+            this.recipients = [
+                'hardik.vyas@kenscio.com',
+                'subhash@kenscio.com ',
+                'ravi.kumar@kenscio.com',
+                'devops.support@kenscio.com'
+            ];
+        }
         // Configure the email transporter
         // You can modify this configuration based on your email provider
         this.transporter = nodemailer.createTransport({
