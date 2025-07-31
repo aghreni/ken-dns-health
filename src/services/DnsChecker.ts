@@ -37,7 +37,11 @@ export class DnsChecker {
 
     async getTXT() {
         try {
-            return await dns.resolveTxt(this.domain);
+            const txtRecords = await dns.resolveTxt(this.domain);
+            // Flatten the nested arrays and return clean strings
+            return txtRecords.map(record =>
+                Array.isArray(record) ? record.join(' ') : record
+            );
         } catch {
             return [];
         }
@@ -80,19 +84,19 @@ export class DnsChecker {
     }
 
 
-    async getSPF() {
-        try {
-            const txt = await this.getTXT();
-            return txt.flat().filter((record) => record.startsWith("v=spf1"));
-        } catch {
-            try {
-                const fallback = await dns.resolveTxt(this.domain.split('.').slice(-2).join('.'));
-                return fallback.flat().filter((record) => record.startsWith("v=spf1"));
-            } catch {
-                return [];
-            }
-        }
-    }
+    // async getSPF() {
+    //     try {
+    //         const txt = await this.getTXT();
+    //         return txt.flat().filter((record) => record.startsWith("v=spf1"));
+    //     } catch {
+    //         try {
+    //             const fallback = await dns.resolveTxt(this.domain.split('.').slice(-2).join('.'));
+    //             return fallback.flat().filter((record) => record.startsWith("v=spf1"));
+    //         } catch {
+    //             return [];
+    //         }
+    //     }
+    // }
 
 
     async getDKIM() {
@@ -138,7 +142,7 @@ export class DnsChecker {
             SOA: await this.getSOA(),
             SRV: await this.getSRV(),
             PTR: await this.getPTR(),
-            SPF: await this.getSPF(),
+            // SPF: await this.getSPF(),
             DKIM: await this.getDKIM(),
             DMARC: await this.getDMARC()
         };

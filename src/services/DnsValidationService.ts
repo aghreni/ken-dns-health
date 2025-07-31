@@ -150,33 +150,22 @@ export class DnsValidationService {
                     break;
                 case 'TXT':
                     actualValues = actualDnsResults.TXT || [];
-                    // TXT records come as nested arrays, flatten and check each level
+                    // TXT records are now returned as flattened strings from DnsChecker
                     let txtMatched = false;
 
-                    // First try direct comparison if it's already a flat array
-                    if (actualValues.includes(expectedValue)) {
-                        txtMatched = true;
-                    } else {
-                        // Flatten completely and check
-                        const flatTxtRecords = actualValues.flat(Infinity);
-                        txtMatched = flatTxtRecords.includes(expectedValue);
+                    const normalizedExpected = expectedValue.replace(/\s+/g, ' ').trim();
 
-                        // If still no match, try joining array elements (in case it's split)
-                        if (!txtMatched) {
-                            for (const record of actualValues) {
-                                if (Array.isArray(record)) {
-                                    const joinedRecord = record.join(' ');
-                                    if (joinedRecord === expectedValue) {
-                                        txtMatched = true;
-                                        break;
-                                    }
-                                } else if (record === expectedValue) {
-                                    txtMatched = true;
-                                    break;
-                                }
-                            }
+                    for (const txtRecord of actualValues) {
+                        const normalizedActual = (typeof txtRecord === 'string' ? txtRecord : String(txtRecord))
+                            .replace(/\s+/g, ' ')
+                            .trim();
+
+                        if (normalizedActual === normalizedExpected) {
+                            txtMatched = true;
+                            break;
                         }
                     }
+
                     matched = txtMatched;
                     break;
                 case 'NS':
@@ -191,7 +180,7 @@ export class DnsValidationService {
             validationResults.push({
                 record_type: recordType,
                 expected_value: expectedValue,
-                actual_values: actualValues,
+                actual_values: matched && actualValues.length === 1 ? actualValues[0] : actualValues,
                 matched
             });
 
