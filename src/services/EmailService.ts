@@ -26,19 +26,36 @@ export class EmailService {
             ];
         }
         // Configure the email transporter
-        // You can modify this configuration based on your email provider
+        // Allow running without email configuration in development
+        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+            console.warn('Warning: SMTP_USER and/or SMTP_PASS not set. Email notifications will be logged but not sent.');
+            this.transporter = {
+                sendMail: async (mailOptions: any) => {
+                    console.log('Email notification would have been sent:', {
+                        to: mailOptions.to,
+                        subject: mailOptions.subject,
+                        // Omit body for brevity in logs
+                    });
+                    return { messageId: 'mock-' + Date.now() };
+                },
+                verify: async () => true,
+            } as any;
+            return;
+        }
+
         this.transporter = nodemailer.createTransport({
-            // For Gmail (you'll need to configure app-specific password)
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER || 'your-email@gmail.com',
-                pass: process.env.EMAIL_PASS || 'your-app-password'
-            },
-            // Additional security options
+            host: process.env.SMTP_HOST || 'smtp.gmail.com',
+            port: parseInt(process.env.SMTP_PORT || '587'),
             secure: false, // true for 465, false for other ports
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
+            },
             requireTLS: true,
             tls: {
-                rejectUnauthorized: false
+                // For Gmail, we want to verify certificates
+                rejectUnauthorized: true,
+                minVersion: 'TLSv1.2'
             }
         });
 
@@ -66,8 +83,8 @@ export class EmailService {
         const htmlBody = this.generateEmailBody(failures);
 
         const mailOptions = {
-            from: process.env.EMAIL_USER || 'dns-monitor@kenscio.com',
-            to: this.recipients.join(', '),
+            from: `"DNS Monitor" <${process.env.SMTP_USER || 'dns-monitor@kenscio.com'}>`,
+            to: this.recipients.filter(r => r.trim().length > 0).join(','),
             subject: subject,
             html: htmlBody
         };
